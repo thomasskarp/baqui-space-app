@@ -31,6 +31,7 @@ export default function Buscador({
       if (!caja.current?.contains(e.target as Node)) setAbierto(false);
     };
     const tecla = (e: KeyboardEvent) => {
+      if (e.key === "Tab") setAbierto(false); // el foco se va de la lista: se cierra
       if (e.key === "Escape") {
         setAbierto(false);
         boton.current?.focus({ preventScroll: true });
@@ -83,10 +84,9 @@ export default function Buscador({
         <button
           ref={boton}
           type="button"
-          aria-haspopup="true"
           aria-expanded={abierto}
           aria-controls={idLista}
-          aria-label={`${T4.buscador.abrir}. ${T4.buscador.elegido}: ${elegido.nombre}`}
+          aria-label={`${T4.buscador.placeholder} ${elegido.nombre}. ${T4.buscador.abrir}`}
           onClick={() => setAbierto((v) => !v)}
           className="flex min-h-11 size-full min-w-0 items-center gap-1 rounded-xl max-sm:min-h-[70px] bg-white/[0.07] px-2 py-2 text-center ring-1 ring-white/10 transition-[background-color,scale] duration-150 ease-[cubic-bezier(0.23,1,0.32,1)] hover:bg-white/[0.11] motion-safe:active:scale-[0.98] sm:gap-2 sm:px-3.5"
         >

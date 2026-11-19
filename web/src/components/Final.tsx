@@ -24,7 +24,7 @@ export default function Final() {
         href={FUENTE}
         target="_blank"
         rel="noopener noreferrer"
-        className="pointer-events-auto absolute right-2 bottom-1.5 text-[10px] text-white/45 hover:text-white/80 sm:right-3 sm:bottom-2"
+        className="pointer-events-auto absolute right-2 bottom-1.5 text-[11px] text-white/70 hover:text-white sm:right-3 sm:bottom-2"
       >
         Foto ilustrativa: Isaacvp, Wikimedia Commons, CC BY-SA 4.0 (adaptada)
       </a>

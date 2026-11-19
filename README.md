@@ -167,7 +167,7 @@ pnpm dev        # http://localhost:3000
 ```bash
 cd analisis
 pip install -r requirements.txt   # Python 3.12+
-python -m pytest -q tests   # 178 tests, they do not need the data
+python -m pytest -q tests   # 181 tests, they do not need the data
 ```
 
 To download the NASA data you need a free [NASA Earthdata](https://urs.earthdata.nasa.gov/) account. The commands are in [`analisis/README.md`](analisis/README.md).
@@ -185,7 +185,7 @@ baqui-space-app/
 │   ├── baqui/descarga/     NASA data download
 │   ├── baqui/graficos/     Before and after images
 │   ├── baqui/chequeos/     Checks that generate the numbers on the web
-│   ├── tests/              178 tests
+│   ├── tests/              181 tests
 │   └── db/                 Database schema (PostgreSQL + PostGIS)
 ├── docs/                   Physical hypothesis, algorithm, state rules and scalability
 │   └── pitch/              Pitch and video script
@@ -250,7 +250,7 @@ flowchart LR
 - Real NISAR measurement over **1,201.7 km** of rural roads in the General San Martín corridor (Chaco): **+1.35 dB**, wet area.
 - The physical hypothesis tested in one comparison (a pass after the rain against a reference pass from the same orbit).
 - Web with the "Will you get there today?" demo on real roads (simulated water), verifiable for free in ASF Vertex.
-- Algorithm programmed: state per segment, rainfall since the pass (IMERG) and drying. 178 tests.
+- Algorithm programmed: state per segment, rainfall since the pass (IMERG) and drying. 181 tests.
 - Audience: State agencies, NGOs and rescue operations.
 
 ### Stage 2 · More area, up-to-date data, defects fixed and farmers

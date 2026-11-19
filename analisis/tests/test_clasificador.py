@@ -239,3 +239,9 @@ def test_valor_enmascarado_de_numpy_es_sin_dato():
     import numpy as np
     for campo in ("N", "agua_seguida_m", "lluvia_mm"):
         assert c(**{campo: np.ma.masked}).color == SIN_DATO
+
+
+def test_dato_faltante_no_tapa_la_causa_de_fondo():
+    r = c(N=0, lluvia_referencia_mm=NAN)
+    assert r.color == SIN_DATO
+    assert r.motivo == "falta el dato de: lluvia de la fecha de referencia; pocos píxeles (0)"

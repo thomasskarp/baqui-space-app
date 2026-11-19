@@ -14,6 +14,7 @@ import { textos as t } from "./textos";
 /* ---------- Formato (coma decimal, punto de miles; igual en servidor y navegador) ---------- */
 
 function fmt(n: number, decimales = 1): string {
+  if (!Number.isFinite(n)) return "—"; // dato roto: raya, no "NaN"
   const [entero, dec] = Math.abs(n).toFixed(decimales).split(".");
   const miles = entero.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
   return `${n < 0 ? "-" : ""}${miles}${dec ? `,${dec}` : ""}`;

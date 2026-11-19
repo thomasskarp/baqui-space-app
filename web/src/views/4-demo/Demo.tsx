@@ -222,6 +222,7 @@ export default function Demo() {
             {/* Mientras carga el mapa se ve esto; el mapa lo tapa al cargar. Si la descarga falla, acá queda el aviso (y ya no se esconde del lector de pantalla). */}
             <div
               aria-hidden={mapaFallo ? undefined : true}
+              role={mapaFallo ? "status" : undefined}
               className="absolute inset-0 -z-10 flex items-center justify-center px-6 text-center text-sm text-ink-3"
             >
               {mapaFallo ? T4.mapa.error : T4.mapa.cargando}

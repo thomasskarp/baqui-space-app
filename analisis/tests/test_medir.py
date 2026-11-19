@@ -254,8 +254,22 @@ def test_con_lo_guardado_en_el_geojson_sale_el_mismo_color(escena, lluvias, opci
 
 
 def test_main_sin_la_grilla_de_la_referencia_no_arranca(escena, tmp_path):
-    with pytest.raises(SystemExit, match="falta IMERG de 2026-09-28: correr python -m baqui.lluvia"):
+    with pytest.raises(SystemExit, match="falta IMERG de 2026-09-28 en .*: correr python -m baqui.lluvia"):
         escena({"2026-09-29": (0, 0)})
-    with pytest.raises(SystemExit, match="falta IMERG de 2026-09-28, 2026-10-12: correr python -m baqui.lluvia"):
+    with pytest.raises(SystemExit, match="falta IMERG de 2026-09-28, 2026-10-12 en .*: correr python -m baqui.lluvia"):
         escena({}, "--hoy", "2026-10-12")
     assert not list(tmp_path.glob("tramos_*.geojson"))
+
+
+def test_main_referencia_con_2_mm_justos_no_es_seca(escena):
+    # el corte es directo: 1 + 1 mm ya no es seca
+    _, meta, (charco, seco) = escena({"2026-09-28": (0, 1), "2026-09-29": (0, 1)})
+    assert seco["color"] == SIN_DATO and seco["referencia_seca"] is False
+    assert meta["referencia_seca"].endswith("(sin dato): 1; sin lluvia medida en esos días: 0")
+
+
+def test_grilla_imerg_rota_avisa_con_el_nombre(tmp_path):
+    from baqui.lluvia import Lluvia
+    (tmp_path / "2026-10-12.npz").write_bytes(b"")
+    with pytest.raises(SystemExit, match="grilla IMERG rota: .*2026-10-12.npz"):
+        Lluvia(tmp_path)

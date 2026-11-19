@@ -190,7 +190,7 @@ El paso entre el radar y la tabla. Corrida: `python -m baqui.medir 20261011_161A
 - **Limpieza:** sin la mayoría de 3 × 3, el doble rebote daba 167 rojos con píxeles sueltos. Con la limpieza quedan 23.
 - **Ojo:**
   - El 68 % de la ventana queda como "monte" (HV alto). Eso incluye cultivos y pastizales, así que los 23 rojos por doble rebote son lo menos firme. Hay que mirarlos uno por uno contra la imagen o preguntar.
-  - La referencia del 29/9 tuvo 4 mm de lluvia ese mismo día (IMERG), de media en todo el corredor: llovió sobre todo al sur. En las celdas de los tramos medidos fueron entre 0,1 y 1,2 mm, menos que los 2 mm del control de referencia seca. Ese control no deja ningún tramo sin dato y las cifras de arriba no cambian (corrida repetida el 18/11).
+  - La referencia del 29/9 tuvo 4 mm de lluvia ese mismo día (IMERG), de media en todo el corredor: llovió sobre todo al sur. En las celdas de los tramos medidos fueron entre 0,1 y 1,2 mm, menos que los 2 mm del control de referencia seca. Ese control no deja ningún tramo sin dato y las cifras de arriba no cambian (corrida repetida el 18/11). Solo 7 tramos que ya estaban sin dato (fuera de la franja del radar) caen además fuera de la grilla de lluvia, y su motivo ahora lo dice.
 
 ### Con la lluvia sumada (`baqui/lluvia.py`, 15/11)
 

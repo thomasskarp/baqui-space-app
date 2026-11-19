@@ -82,6 +82,10 @@ def test_sensibilidad_mueve_dias_frescos():
     assert s["dias_frescos"] == 0.4 and max(s.values()) == 0.4
     # los cortes de calidad del dato y el margen quedan afuera
     assert not {"min_pixeles", "max_dias", "lluvia_referencia", "margen"} & set(s)
+    from dataclasses import fields
+    from baqui.clasificador import Umbrales
+    from baqui.sensibilidad import NO_SE_MUEVEN
+    assert set(s) == {f.name for f in fields(Umbrales)} - NO_SE_MUEVEN
 
 
 def test_real_mal_escrito_en_un_caso_sin_color_tira_error():

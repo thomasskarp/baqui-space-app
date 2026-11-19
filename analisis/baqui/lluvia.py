@@ -50,10 +50,14 @@ class Lluvia:
     """Suma la lluvia de la celda IMERG más cercana, entre dos fechas o para una lista de días."""
 
     def __init__(self, carpeta=CARPETA):
+        self.carpeta = Path(carpeta)
         self.dias = {}
-        for f in sorted(Path(carpeta).glob("*.npz")):
-            z = np.load(f)
-            self.dias[f.stem] = (z["lon"], z["lat"], z["p"])
+        for f in sorted(self.carpeta.glob("*.npz")):
+            try:
+                z = np.load(f)
+                self.dias[f.stem] = (z["lon"], z["lat"], z["p"])
+            except Exception as e:   # descarga cortada o archivo vacío: bajar() no lo repite porque ya existe
+                raise SystemExit(f"grilla IMERG rota: {f} ({e}); borrala y corré python -m baqui.lluvia") from e
 
     def faltan(self, pasada: date, hoy: date):
         return [d.isoformat() for d in _dias(pasada, hoy) if d.isoformat() not in self.dias]

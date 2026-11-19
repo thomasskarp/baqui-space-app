@@ -117,7 +117,13 @@ def clasificar(t: Tramo, u: Umbrales = Umbrales()) -> Resultado:
     if t.lluvia_referencia_mm is not None and not _es_numero(t.lluvia_referencia_mm):
         rotos.append("lluvia de la fecha de referencia")
     if rotos:
-        return Resultado(SIN_DATO, "S", "falta el dato de: " + ", ".join(rotos), "—", avisos)
+        # se suman las fallas de calidad que se pueden leer, para no tapar la causa de fondo
+        extra = []
+        if _es_numero(t.N) and _suelto(t.N) < u.min_pixeles:
+            extra.append(f"pocos píxeles ({_suelto(t.N):g})")
+        if _es_numero(t.E) and _suelto(t.E) > u.max_dias:
+            extra.append(f"radar de hace {_suelto(t.E):g} días")
+        return Resultado(SIN_DATO, "S", "; ".join(["falta el dato de: " + ", ".join(rotos)] + extra), "—", avisos)
     # hand_m y dM son opcionales: rotos valen lo mismo que "no hay", pero se avisa.
     # Se copia: el Tramo que entra no se toca.
     if t.hand_m is not None and not _es_numero(t.hand_m):

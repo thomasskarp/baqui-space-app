@@ -214,7 +214,7 @@ def main(argv=None):
     lluvia = Lluvia()
     falta = [d.isoformat() for d in dias_ref if d.isoformat() not in lluvia.dias] + lluvia.faltan(pasada, hoy)
     if falta:
-        raise SystemExit(f"falta IMERG de {', '.join(sorted(set(falta)))}: correr python -m baqui.lluvia")
+        raise SystemExit(f"falta IMERG de {', '.join(sorted(set(falta)))} en {lluvia.carpeta}: correr python -m baqui.lluvia")
     mapas, info = clases(antes, despues)
     x, y = despues["x"], despues["y"]
     u = Umbrales()

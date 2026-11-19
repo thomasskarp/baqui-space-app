@@ -58,7 +58,7 @@ export const textos = {
   medicion: "Medición: caminos rurales sin pavimento de OpenStreetMap, mediana del eje",
   copiarId: "Copiar ID del archivo",
   copiado: "Copiado",
-  copiarLector: "Copiar el identificador oficial del archivo NISAR, para buscarlo en ASF Vertex",
+  copiarLector: "Copiar ID del archivo: el identificador oficial de NISAR, para buscarlo en ASF Vertex",
   copiadoLector: "Identificador copiado.",
   verificar: "Verificalo gratis en ASF Vertex",
   nuevaPestana: "(se abre en otra pestaña)",
