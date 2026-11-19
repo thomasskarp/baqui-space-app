@@ -81,7 +81,7 @@ cualquier_camino = ras(todos, 30)
 vecino = ras(todos, 100) & ~cualquier_camino & ok             # de 30 a 100 m del eje: al costado
 lejos = ~ras(todos, 300) & ok                                 # campo a más de 300 m de un camino
 
-# --- cortes de medir.py (mismos números)
+# --- cortes: números de medir.py, pero el de agua es -18 dB fijo (allá: mínimo entre Otsu y -18) y sin la limpieza de 3 × 3
 from_corte_agua = -18.0
 # Otsu del HV de referencia
 def otsu(v, bins=256):

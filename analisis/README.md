@@ -30,7 +30,7 @@ python -m venv .venv          # hace falta Python 3.12 o más nuevo
 source .venv/bin/activate   # en Windows: .venv\Scripts\activate
 pip install -r requirements.txt
 
-python -m pytest -q tests   # 56 tests, no necesitan los datos
+python -m pytest -q tests   # 178 tests, no necesitan los datos
 ```
 
 Para bajar datos hace falta una cuenta gratis de [NASA Earthdata](https://urs.earthdata.nasa.gov/):

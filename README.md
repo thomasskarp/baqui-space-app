@@ -167,7 +167,7 @@ pnpm dev        # http://localhost:3000
 ```bash
 cd analisis
 pip install -r requirements.txt   # Python 3.12+
-python -m pytest -q tests   # 56 tests, they do not need the data
+python -m pytest -q tests   # 178 tests, they do not need the data
 ```
 
 To download the NASA data you need a free [NASA Earthdata](https://urs.earthdata.nasa.gov/) account. The commands are in [`analisis/README.md`](analisis/README.md).
@@ -185,7 +185,7 @@ baqui-space-app/
 │   ├── baqui/descarga/     NASA data download
 │   ├── baqui/graficos/     Before and after images
 │   ├── baqui/chequeos/     Checks that generate the numbers on the web
-│   ├── tests/              56 tests
+│   ├── tests/              178 tests
 │   └── db/                 Database schema (PostgreSQL + PostGIS)
 ├── docs/                   Physical hypothesis, algorithm, state rules and scalability
 │   └── pitch/              Pitch and video script
@@ -250,7 +250,7 @@ flowchart LR
 - Real NISAR measurement over **1,201.7 km** of rural roads in the General San Martín corridor (Chaco): **+1.35 dB**, wet area.
 - The physical hypothesis tested in one comparison (a pass after the rain against a reference pass from the same orbit).
 - Web with the "Will you get there today?" demo on real roads (simulated water), verifiable for free in ASF Vertex.
-- Algorithm programmed: state per segment, rainfall since the pass (IMERG) and drying. 56 tests.
+- Algorithm programmed: state per segment, rainfall since the pass (IMERG) and drying. 178 tests.
 - Audience: State agencies, NGOs and rescue operations.
 
 ### Stage 2 · More area, up-to-date data, defects fixed and farmers
@@ -294,7 +294,10 @@ The Space Apps 2026 rules ask us to state how we used AI.
 ## 14. Credits and license
 
 - **Code:** [MIT](LICENSE) license.
-- **Data:** NASA (NISAR with ISRO, IMERG, OPERA, SMAP, Blue Marble), public data. Copernicus DEM GLO-30 from ESA.
+- **Data:** NASA (NISAR with ISRO, IMERG, OPERA, SMAP, NASADEM, Blue Marble), public data. Sentinel-1 (through OPERA) and Copernicus DEM GLO-30 from ESA.
 - **Roads:** © [OpenStreetMap](https://www.openstreetmap.org/copyright) contributors, ODbL license.
+- **Satellite mosaic of the demo map:** [Sentinel-2 cloudless 2023](https://s2maps.eu) by EOX IT Services GmbH (contains modified Copernicus Sentinel data 2023), CC BY-NC-SA 4.0 license (non-commercial use only).
+- **NISAR orbit on the globe:** TLE from [Celestrak](https://celestrak.org/NORAD/elements/gp.php?NAME=NISAR&FORMAT=TLE).
+- **Rain forecast** (helper script [`analisis/baqui/pronostico.py`](analisis/baqui/pronostico.py), not yet connected to the state per segment): [Open-Meteo](https://open-meteo.com/), or Meteomatics when an account is configured.
 - **Footer photo:** "Camino inundado en Salinas, Alvarado, Veracruz 01", by Isaacvp, [Wikimedia Commons](https://commons.wikimedia.org/wiki/File:Camino_inundado_en_Salinas,_Alvarado,_Veracruz_01.jpg), CC BY-SA 4.0 license. Adapted (crop and tone), under the same license.
 - BAQUI is not affiliated with NASA and does not represent it.

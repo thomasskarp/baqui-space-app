@@ -13,7 +13,7 @@ NISAR data are archived permanently and for free by NASA (ASF DAAC, NASA Earthda
 | Item | Size | How we know |
 |---|---|---|
 | One full NISAR GCOV scene | ~1.8 GB | Measured (one file from 29 Sep 2026) |
-| The corridor window we read over the internet | ~43 MB | Measured: `analisis/baqui/bajar_nisar.py` already reads only this window |
+| The corridor window we read over the internet | ~43 MB | Measured: `analisis/baqui/descarga/bajar_nisar.py` already reads only this window |
 | The result of one pass over the corridor (12,017 segments of 100 m) | ~1.2 MB | Estimated from the schema (see below) |
 
 From 1.8 GB to about 1.2 MB: roughly **1,500 times less** to store per pass.

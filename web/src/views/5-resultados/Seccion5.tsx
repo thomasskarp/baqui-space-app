@@ -27,8 +27,14 @@ const subidaDb = eco.subida_db;
 const DECIMALES_DB = 2;
 /** Puntos del eje que subieron más de 1 dB, de cada 10 (de 1 a 3 dB más los de más de 3 dB). */
 const subenDeCada10 = Math.round((suben.pct_1_a_3_db + suben.pct_mas_de_3_db) / 10);
-/** Decimales justos para que el porcentaje de agua no se lea como cero (0,006 → 3). */
-const decimalesAgua = Math.max(1, -Math.floor(Math.log10(agua.pct_con_agua)));
+/**
+ * Decimales justos para que el porcentaje de agua no se lea como cero (0,006 → 3), con tope de 6.
+ * Si el dato es 0 o no es un número válido, 1 decimal (log10 daría infinito y toFixed tiraría error).
+ */
+const decimalesAgua =
+  Number.isFinite(agua.pct_con_agua) && agua.pct_con_agua > 0
+    ? Math.min(6, Math.max(1, -Math.floor(Math.log10(agua.pct_con_agua))))
+    : 1;
 
 /* ---------- Hooks locales ---------- */
 

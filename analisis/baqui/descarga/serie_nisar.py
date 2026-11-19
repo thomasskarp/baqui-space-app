@@ -4,6 +4,7 @@ Uso: python -m baqui.descarga.serie_nisar
 Guarda datos/nisar/<fecha>_<orbita>_caminos.npz
 """
 import os, time
+from pathlib import Path
 import numpy as np, h5py, earthaccess
 from baqui.descarga.bajar_nisar import BASE, SALIDA
 from pyproj import Transformer
@@ -22,6 +23,7 @@ PASADAS = [  # (colección, texto que identifica el archivo)
 
 def main():
     earthaccess.login(strategy="netrc")
+    Path(SALIDA).mkdir(parents=True, exist_ok=True)   # en un clon nuevo la carpeta no existe
     for col, clave in PASADAS:
         p = clave.split("_")
         fecha, orbita = p[-1], p[1] + p[2] + p[3]

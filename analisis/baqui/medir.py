@@ -8,6 +8,12 @@ Uso:
   python -m baqui.medir 20261011_161A164 20260929_161A164 [--zona corredor] [--tramo 1000] [--hoy 2026-10-11]
 Salida: datos/nisar/tramos_<después>[_<hoy>].geojson (un tramo por feature, con medidas y color).
 Con --hoy posterior a la pasada se suma la lluvia IMERG del tramo (baqui/lluvia.py) y cuenta la edad del radar.
+Control de la referencia: con 2 mm o más de lluvia IMERG entre el día anterior y el de la referencia, el tramo
+queda sin dato (hacen falta las grillas de esos dos días). Límite: solo mira esos dos días. Una lluvia fuerte de
+días anteriores no se ve, aunque el camino siga mojado (en baqui/estado.py el barro baja a la mitad cada 5,7 días):
+la fecha de referencia se sigue eligiendo seca a mano.
+Cada tramo guarda `referencia_seca`: true (seca), false (llovió) o null (no hay lluvia medida). Así, con lo
+guardado en el GeoJSON, el clasificador vuelve a dar el mismo color.
 
 Pasos por píxel (docs/algoritmo.md y docs/clasificacion-semaforo.md):
   1. Máscara de NISAR: vale solo 1..254. El 0 es "parcialmente enfocado" y el 255 queda fuera de la toma
@@ -23,7 +29,7 @@ de `paso_m` a lo largo del camino: una casilla cuenta si tiene al menos un píxe
 El HAND queda para el paso siguiente: mientras tanto el clasificador usa el umbral fijo de 25 mm.
 """
 from pathlib import Path
-import argparse, json
+import argparse, json, math
 from dataclasses import dataclass, asdict
 from datetime import date, timedelta
 
@@ -34,7 +40,7 @@ from scipy.ndimage import median_filter
 from shapely.geometry import LineString, mapping
 from shapely.ops import substring
 
-from baqui.clasificador import Tramo, clasificar
+from baqui.clasificador import Tramo, Umbrales, clasificar
 from baqui.lluvia import Lluvia
 
 D = "datos/nisar"
@@ -175,6 +181,17 @@ def caminos_osm(ruta="datos/osm/roads.json"):
     return [e for e in rd["elements"] if e.get("type") == "way" and len(e.get("geometry", [])) > 1]
 
 
+def sin_nan(o):
+    """NaN e inf no existen en JSON: pasan a None (null), también dentro de listas y diccionarios."""
+    if isinstance(o, dict):
+        return {k: sin_nan(v) for k, v in o.items()}
+    if isinstance(o, (list, tuple)):
+        return [sin_nan(v) for v in o]
+    if isinstance(o, float) and not math.isfinite(o):
+        return None
+    return o
+
+
 def main(argv=None):
     a = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     a.add_argument("despues")
@@ -188,40 +205,58 @@ def main(argv=None):
     antes, despues = cargar(args.referencia, args.zona), cargar(args.despues, args.zona)
     assert antes["epsg"] == despues["epsg"] and np.allclose(antes["x"], despues["x"]) \
         and np.allclose(antes["y"], despues["y"]), "las dos pasadas no tienen la misma grilla"
-    orb0, ver0, _ = _partes(antes["archivo"])
+    orb0, ver0, f0 = _partes(antes["archivo"])
     orb1, ver1, f1 = _partes(despues["archivo"])
     pasada = date(int(f1[:4]), int(f1[4:6]), int(f1[6:]))
+    referencia = date(int(f0[:4]), int(f0[4:6]), int(f0[6:]))
     hoy = date.fromisoformat(args.hoy) if args.hoy else pasada
+    dias_ref = [referencia - timedelta(days=1), referencia]   # para saber si la referencia es seca
+    lluvia = Lluvia()
+    falta = [d.isoformat() for d in dias_ref if d.isoformat() not in lluvia.dias] + lluvia.faltan(pasada, hoy)
+    if falta:
+        raise SystemExit(f"falta IMERG de {', '.join(sorted(set(falta)))}: correr python -m baqui.lluvia")
     mapas, info = clases(antes, despues)
     x, y = despues["x"], despues["y"]
-    lluvia = Lluvia() if hoy > pasada else None
-    if lluvia and lluvia.faltan(pasada, hoy):
-        raise SystemExit(f"falta IMERG de {', '.join(lluvia.faltan(pasada, hoy))}: correr python -m baqui.lluvia")
+    u = Umbrales()
 
     ida = Transformer.from_crs(4326, despues["epsg"], always_xy=True).transform
     vuelta = Transformer.from_crs(despues["epsg"], 4326, always_xy=True).transform
-    feats, colores = [], {}
+    feats, colores, ref_no_seca, ref_sin_lluvia = [], {}, 0, 0
     for way in caminos_osm(args.osm):
         linea = LineString([ida(p["lon"], p["lat"]) for p in way["geometry"]])
         for i, pieza in enumerate(cortar(linea, args.tramo)):
             med = medir_tramo(pieza, mapas, x, y)
-            mm = lluvia.desde_pasada(*vuelta(*pieza.interpolate(0.5, normalized=True).coords[0]), pasada, hoy)                 if lluvia else 0.0
+            lon, lat = vuelta(*pieza.interpolate(0.5, normalized=True).coords[0])
+            mm = lluvia.desde_pasada(lon, lat, pasada, hoy) if hoy > pasada else 0.0
+            mm_ref = lluvia.suma(lon, lat, dias_ref)
+            # Lo que se midió: True (seca), False (llovió) o None (sin lluvia medida). Hace falta en el GeoJSON:
+            # ahí el NaN de mm_ref se guarda como null y, al releerlo, la referencia pasaría por seca.
+            seca = mm_ref < u.lluvia_referencia if math.isfinite(mm_ref) else None
             t = Tramo(E=(hoy - pasada).days, T=tipo(way.get("tags")), misma_orbita=orb0 == orb1, lluvia_mm=mm,
-                      misma_version=ver0 == ver1, fecha_pasada=pasada.strftime("%d/%m"), **med)
-            r = clasificar(t)
+                      misma_version=ver0 == ver1, fecha_pasada=pasada.strftime("%d/%m"),
+                      referencia_seca=seca, lluvia_referencia_mm=mm_ref, **med)
+            r = clasificar(t, u)
             colores[r.color] = colores.get(r.color, 0) + 1
+            ref_no_seca += seca is False
+            ref_sin_lluvia += seca is None
             props = {"way": way["id"], "nombre": (way.get("tags") or {}).get("name", ""), "tramo": i,
                      "largo_m": round(pieza.length), **asdict(t), "color": r.color, "regla": r.regla,
                      "motivo": r.motivo, "confianza": r.confianza, "avisos": r.avisos}
-            feats.append({"type": "Feature", "geometry": mapping(shapely.transform(pieza, lambda xy: np.column_stack(vuelta(xy[:, 0], xy[:, 1])))), "properties": props})
+            feats.append({"type": "Feature", "geometry": mapping(shapely.transform(pieza, lambda xy: np.column_stack(vuelta(xy[:, 0], xy[:, 1])))), "properties": sin_nan(props)})
 
     salida = f"{D}/tramos_{args.despues}" + (f"_{hoy:%Y%m%d}" if hoy > pasada else "") + ".geojson"
-    meta = {"despues": despues["archivo"], "referencia": antes["archivo"], "hoy": hoy.isoformat(),
-            "tramo_m": args.tramo, "cortes": asdict(Cortes()), **{k: round(v, 2) for k, v in info.items()},
-            "lluvia": f"IMERG Late diario, del {pasada + timedelta(days=1):%d/%m} al {hoy:%d/%m}" if lluvia else "sin lluvia: hoy = día de la pasada",
-            "pendiente": "HAND todavía no se suma (umbral fijo de 25 mm)"}
+    meta = sin_nan({
+        "despues": despues["archivo"], "referencia": antes["archivo"], "hoy": hoy.isoformat(),
+        "tramo_m": args.tramo, "cortes": asdict(Cortes()), **{k: round(v, 2) for k, v in info.items()},
+        "lluvia": f"IMERG Late diario, del {pasada + timedelta(days=1):%d/%m} al {hoy:%d/%m}" if hoy > pasada
+                  else "sin lluvia: hoy = día de la pasada",
+        "referencia_seca": f"IMERG Late diario del {dias_ref[0]:%d/%m} y el {dias_ref[1]:%d/%m}: con"
+                           f" {u.lluvia_referencia:g} mm o más la referencia no es seca. Tramos en celdas con"
+                           f" {u.lluvia_referencia:g} mm o más (sin dato): {ref_no_seca}; sin lluvia medida en esos días: {ref_sin_lluvia}",
+        "pendiente": "HAND todavía no se suma (umbral fijo de 25 mm)"})
+    # NaN no es JSON: en propiedades y meta ya pasó a null; si queda alguno (una coordenada), que falle acá
     Path(salida).write_text(json.dumps({"type": "FeatureCollection", "baqui": meta, "features": feats},
-                                       ensure_ascii=False), encoding="utf-8")
+                                       ensure_ascii=False, allow_nan=False), encoding="utf-8")
     print(json.dumps({k: meta[k] for k in meta if k not in ("cortes",)}, ensure_ascii=False, indent=1))
     print(f"{len(feats)} tramos -> {salida}")
     for k, v in sorted(colores.items(), key=lambda kv: -kv[1]):

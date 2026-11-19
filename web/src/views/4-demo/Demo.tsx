@@ -31,16 +31,22 @@ const AGUA_CORTA_M = 400;
  */
 function useMapa() {
   const [Mapa, setMapa] = useState<ComponentType<ComponentProps<typeof MapaDemoTipo>> | null>(null);
+  /** true si la descarga del mapa falló (sin conexión): se avisa en vez de quedar cargando para siempre. */
+  const [fallo, setFallo] = useState(false);
   useEffect(() => {
     let vivo = true;
-    import("./MapaDemo").then((m) => {
-      if (vivo) setMapa(() => m.default);
-    });
+    import("./MapaDemo")
+      .then((m) => {
+        if (vivo) setMapa(() => m.default);
+      })
+      .catch(() => {
+        if (vivo) setFallo(true);
+      });
     return () => {
       vivo = false;
     };
   }, []);
-  return Mapa;
+  return { Mapa, fallo };
 }
 
 /**
@@ -95,7 +101,7 @@ export default function Demo() {
   const raiz = useRef<HTMLDivElement>(null);
   // El agua aparece (animada) recién la primera vez que la demo se ve; fuera de pantalla no se anima.
   const { visible, vista } = useVisibilidad(raiz);
-  const MapaDemo = useMapa();
+  const { Mapa: MapaDemo, fallo: mapaFallo } = useMapa();
 
   const destino = DATOS.destinos.find((d) => d.id === destinoId) ?? DATOS.destinos[0];
 
@@ -213,9 +219,12 @@ export default function Demo() {
             data-hoy={vista ? "si" : "no"}
             className={`${s.mapa} relative isolate z-0 order-3 m-0 h-[29svh] min-h-[220px] overflow-hidden rounded-3xl border border-line shadow-[0_30px_80px_-30px_rgb(20_60_120/0.55)] sm:h-[38svh] lg:absolute lg:inset-0 lg:h-auto lg:min-h-0`}
           >
-            {/* Mientras carga el mapa se ve esto; el mapa lo tapa al cargar. */}
-            <div aria-hidden className="absolute inset-0 -z-10 flex items-center justify-center text-sm text-ink-3">
-              {T4.mapa.cargando}
+            {/* Mientras carga el mapa se ve esto; el mapa lo tapa al cargar. Si la descarga falla, acá queda el aviso (y ya no se esconde del lector de pantalla). */}
+            <div
+              aria-hidden={mapaFallo ? undefined : true}
+              className="absolute inset-0 -z-10 flex items-center justify-center px-6 text-center text-sm text-ink-3"
+            >
+              {mapaFallo ? T4.mapa.error : T4.mapa.cargando}
             </div>
             <div className="absolute inset-0 z-0">
               {MapaDemo && (

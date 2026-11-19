@@ -24,7 +24,7 @@
 
 ### 4. Lluvia desde la última pasada: ¿el dato sigue valiendo?
 - **Fuente:** NASA IMERG (medida con microondas, se actualiza cada 30 min).
-- **Cómo funciona:** se suma la lluvia caída **desde que pasó el radar** hasta ahora. Si llovió mucho después, lo que vio el radar ya no vale.
+- **Cómo funciona:** se suma la lluvia caída **desde que pasó el radar** hasta ahora. Si llovió mucho después, lo que vio el radar ya no vale. Si falta la lluvia de un día, no se toma como día seco: el tramo queda sin dato.
 
 ### 5. Qué tan bajo está el tramo (HAND): ¿junta agua?
 - **Fuente:** modelo de altura **Copernicus DEM**, que se hizo con radar (TanDEM-X). De ahí sale el **HAND** (*Height Above Nearest Drainage*): cuántos metros está el camino por encima del cauce o bajo más cercano. ⚠️ ASF publica un HAND global de 30 m; confirmar la descarga.
@@ -38,6 +38,8 @@
 Por cada tramo se mira una **franja de 30 m** a cada lado del camino (el radar ve de a ~20 m y un camino mide ~10 m).
 
 **Primero se pregunta por el rojo, después por el gris, después por el amarillo y, si no es nada de eso, es verde.**
+
+Antes de todo eso va un control de seguridad: si falta algún valor del radar o de la lluvia, el tramo sale **sin dato**. Un dato vacío nunca da verde. El detalle está en [clasificacion-semaforo.md](clasificacion-semaforo.md).
 
 | Color | Regla | En criollo |
 |---|---|---|

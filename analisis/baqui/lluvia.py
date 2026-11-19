@@ -8,7 +8,11 @@ Salida: datos/imerg/grilla/<AAAA-MM-DD>.npz con lon, lat y p (mm del día UTC; f
 
 Límite: IMERG diario va de 0 a 24 h UTC y NISAR pasa cerca de las 10 UTC. "Desde la pasada" se cuenta
 desde el día siguiente al de la pasada hasta el día de la consulta, los dos incluidos.
+Una celda sin dato (NaN) no cuenta como día seco: la suma da NaN y el semáforo responde "sin dato".
+Lo mismo con un punto que cae fuera de la grilla o que no tiene coordenadas: no se le presta la celda del borde.
 """
+import math
+import numbers
 import sys
 from datetime import date, timedelta
 from pathlib import Path
@@ -18,6 +22,7 @@ import numpy as np
 from baqui.descarga.bajar_capas import BBOX, RAIZ
 
 CARPETA = RAIZ / "imerg" / "grilla"
+CELDA = 0.1   # grados: lado de la celda de IMERG. Se usa si la grilla tiene una sola celda en ese eje
 
 
 def bajar(desde="2026-09-25", hasta="2026-11-15"):
@@ -42,7 +47,7 @@ def bajar(desde="2026-09-25", hasta="2026-11-15"):
 
 
 class Lluvia:
-    """Suma la lluvia de la celda IMERG más cercana entre dos fechas."""
+    """Suma la lluvia de la celda IMERG más cercana, entre dos fechas o para una lista de días."""
 
     def __init__(self, carpeta=CARPETA):
         self.dias = {}
@@ -53,17 +58,45 @@ class Lluvia:
     def faltan(self, pasada: date, hoy: date):
         return [d.isoformat() for d in _dias(pasada, hoy) if d.isoformat() not in self.dias]
 
-    def desde_pasada(self, lon, lat, pasada: date, hoy: date):
-        """mm desde el día siguiente a la pasada hasta hoy. Si falta un día, error: no se inventa lluvia."""
-        falta = self.faltan(pasada, hoy)
+    def suma(self, lon, lat, dias):
+        """mm de la celda más cercana, sumando los días de la lista (fechas). Sin días, 0.
+
+        No se inventa nada: si falta la grilla de un día, error; si la celda de un día
+        está vacía (NaN), devuelve NaN, que no es lo mismo que un día seco. También da NaN
+        si lon o lat no son un número finito o si el punto cae fuera de la grilla.
+        """
+        dias = list(dias)
+        falta = [d.isoformat() for d in dias if d.isoformat() not in self.dias]
         if falta:
             raise LookupError(f"falta la grilla IMERG de {', '.join(falta)}: correr python -m baqui.lluvia")
         total = 0.0
-        for d in _dias(pasada, hoy):
+        for d in dias:
             lo, la, p = self.dias[d.isoformat()]
-            v = p[np.abs(la - lat).argmin(), np.abs(lo - lon).argmin()]
-            total += 0.0 if np.isnan(v) else float(v)
+            fila, columna = _celda(la, lat), _celda(lo, lon)
+            if fila is None or columna is None:
+                return float("nan")
+            v = float(p[fila, columna])
+            if not math.isfinite(v):
+                return float("nan")
+            total += v
         return round(total, 1)
+
+    def desde_pasada(self, lon, lat, pasada: date, hoy: date):
+        """mm desde el día siguiente a la pasada hasta hoy. Si falta un día, error; si la celda de un día está vacía, NaN."""
+        return self.suma(lon, lat, _dias(pasada, hoy))
+
+
+def _celda(eje, valor):
+    """Índice de la celda más cercana a `valor` en un eje de la grilla (lon o lat).
+
+    None si `valor` no es un número finito o si queda a más de media celda del centro más cercano:
+    el punto está fuera de la grilla y la celda del borde no es su lluvia.
+    """
+    if not (isinstance(valor, numbers.Real) and math.isfinite(valor)):
+        return None
+    k = int(np.abs(eje - valor).argmin())
+    paso = float(np.median(np.abs(np.diff(eje)))) if len(eje) > 1 else CELDA
+    return k if abs(float(eje[k]) - valor) <= 0.501 * paso else None   # 0,501: lugar para el redondeo de float32
 
 
 def _dias(pasada, hoy):

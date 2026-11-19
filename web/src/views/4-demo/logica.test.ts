@@ -55,6 +55,38 @@ const laguna = agua(200, 400);
 prueba("laguna de siempre de 200 m → no cuenta", !caminoTapado(camino, [laguna], [laguna]));
 prueba("la misma agua, si fuera nueva → intransitable", caminoTapado(camino, [laguna]));
 
+// 5b. Bordes del conteo. Cada muestra tapada vale 5 m (N muestras = N × 5 m): redondea para el lado prudente.
+// Un charco de 50 m o más siempre da intransitable y uno de 40 m o menos nunca, caigan donde caigan las muestras.
+// Entre 45 y 50 m depende de dónde caen. (Con (N − 1) × 5 m se escaparían charcos reales de 50 a 55 m.)
+const CORRIMIENTOS = [0, 0.5, 1, 2.5, 4, 4.9]; // metros entre el borde del charco y la muestra anterior
+/** Un charco de `largo` m en cada corrimiento: en el medio del camino y contra el final (camino que no termina justo en una muestra). */
+function charcosDe(largo: number): { linea: LogicaTipos.LatLon[]; charco: LogicaTipos.Poligono }[] {
+  return CORRIMIENTOS.flatMap((c) => {
+    const fin = 1000 + c;
+    const hastaElFin: LogicaTipos.LatLon[] = [
+      [LAT, lon(0)],
+      [LAT, lon(fin)],
+    ];
+    return [
+      { linea: camino, charco: agua(400 + c, 400 + c + largo) },
+      { linea: hastaElFin, charco: agua(fin - largo, fin + 100) },
+    ];
+  });
+}
+/** "de 50 a 55 m tapados": lo menos y lo más que cuenta la lógica entre todos los corrimientos. */
+const cuenta = (casos: ReturnType<typeof charcosDe>) => {
+  const m = casos.map((k) => tramoTapadoMaxM(k.linea, [k.charco]));
+  return `de ${Math.min(...m)} a ${Math.max(...m)} m tapados en ${m.length} posiciones`;
+};
+for (const largo of [50, 51, 52.5, 54.9, 60]) {
+  const casos = charcosDe(largo);
+  prueba(`charco de ${largo} m → siempre intransitable`, casos.every((k) => caminoTapado(k.linea, [k.charco])), cuenta(casos));
+}
+for (const largo of [40, 39, 30, 5]) {
+  const casos = charcosDe(largo);
+  prueba(`charco de ${largo} m → nunca intransitable`, !casos.some((k) => caminoTapado(k.linea, [k.charco])), cuenta(casos));
+}
+
 // 6. Veredicto del viaje.
 prueba("veredicto: camino 1 libre → llegás", veredicto([false, true]) === "llegas");
 prueba("veredicto: solo camino 2 libre → alternativo", veredicto([true, false]) === "alternativo");

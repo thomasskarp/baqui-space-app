@@ -2,8 +2,11 @@
 
 Entrada: un CSV con columnas
     tramo, fecha, evento, baqui, real, confianza
-  baqui: transitable | con barro | intransitable | sin dato
+  baqui: transitable | con barro | intransitable | sin dato | dato viejo
   real:  pasé | con dificultad | no pasé
+"sin dato" y "dato viejo" no cuentan para el acierto y bajan la cobertura:
+ahí Baqui no afirmó nada (en "dato viejo" dijo "preguntá antes de salir").
+El informe dice cuántos de esos eran caminos cortados: no entran en la detección.
 Uso:  python -m baqui.auditoria casos.csv [--evento-calibracion 2026-10-09]
 """
 import csv, sys
@@ -11,6 +14,7 @@ from collections import Counter
 from scipy.stats import beta
 
 COLORES = ["transitable", "con barro", "intransitable"]
+SIN_COLOR = {"sin dato", "dato viejo"}  # Baqui no afirmó nada
 REALES = ["pasé", "con dificultad", "no pasé"]
 ACIERTO = {("transitable", "pasé"), ("con barro", "con dificultad"), ("intransitable", "no pasé")}
 NIVEL = 0.95  # garantía con 95 % de confianza estadística
@@ -49,10 +53,13 @@ def leer(ruta):
 def auditar(casos, excluir_evento=None):
     """Devuelve las medidas. Los casos del evento de calibración no cuentan."""
     usados = [c for c in casos if c.get("evento") != excluir_evento]
-    sin_dato = [c for c in usados if c["baqui"] == "sin dato"]
-    con_color = [c for c in usados if c["baqui"] != "sin dato"]
+    sin_dato = [c for c in usados if c["baqui"] in SIN_COLOR]
+    con_color = [c for c in usados if c["baqui"] not in SIN_COLOR]
     for c in con_color:
         if c["baqui"] not in COLORES or c["real"] not in REALES:
+            raise ValueError(f"valor raro en el caso {c}")
+    for c in sin_dato:   # sin color, "real" puede venir vacío, pero un texto mal escrito no se cuenta en silencio
+        if c["real"] not in REALES and c["real"] != "":
             raise ValueError(f"valor raro en el caso {c}")
     m = Counter((c["baqui"], c["real"]) for c in con_color)
     n = len(con_color)
@@ -64,6 +71,7 @@ def auditar(casos, excluir_evento=None):
     return {
         "n": n,
         "sin_dato": len(sin_dato),
+        "sin_dato_no_pase": sum(c["real"] == "no pasé" for c in sin_dato),  # cortes reales que quedaron sin color
         "cobertura": n / len(usados) if usados else 0.0,
         "matriz": m,
         "acierto": ok / n if n else 0.0,
@@ -81,13 +89,14 @@ def auditar(casos, excluir_evento=None):
 
 def informe(r):
     p = lambda x: f"{100 * x:.0f} %"
-    l = [f"Casos con color: {r['n']}   sin dato: {r['sin_dato']}   cobertura: {p(r['cobertura'])}", "",
+    l = [f"Casos con color: {r['n']}   sin dato o dato viejo: {r['sin_dato']} (no pasó: {r['sin_dato_no_pase']})"
+         f"   cobertura: {p(r['cobertura'])}", "",
          "Baqui / real      " + "".join(f"{x:>16}" for x in REALES)]
     for c in COLORES:
         l.append(f"{c:<18}" + "".join(f"{r['matriz'][(c, x)]:>16}" for x in REALES))
     l += ["",
           f"Acierto medido: {p(r['acierto'])}   garantizado (95 %): al menos {p(r['acierto_garantizado'])}",
-          f"Caminos cortados: {r['no_pase']}   detectados en rojo: {p(r['deteccion'])}"
+          f"Caminos cortados con color: {r['no_pase']}   detectados en rojo: {p(r['deteccion'])}"
           f"   garantizado: al menos {p(r['deteccion_garantizada'])}",
           f"ESCAPADOS (verde y no pasó): {r['escapados']}"
           f"   como mucho {p(r['escapados_max'])} de los caminos cortados",

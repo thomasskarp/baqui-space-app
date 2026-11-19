@@ -58,6 +58,7 @@ export const T4 = {
   mapa: {
     region: "Mapa satelital del recorrido",
     cargando: "Cargando mapa…",
+    error: "No se pudo cargar el mapa. Revisá tu conexión y recargá la página.",
     datosPrueba: "Datos de prueba",
     datosPruebaDetalle: "Agua simulada",
     leyendaCamino: "Camino (OpenStreetMap)",

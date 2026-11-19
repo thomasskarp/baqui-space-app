@@ -6,10 +6,10 @@
 - La auditoría que permite **garantizar** un porcentaje de acierto.
 
 Código:
-- `baqui/clasificador.py`: decide el color.
-- `baqui/auditoria.py`: mide el acierto.
-- `baqui/sensibilidad.py`: mide qué tan frágil es cada umbral.
-- Tests: `tests/`. Pasan 26 de 26.
+- `analisis/baqui/clasificador.py`: decide el color.
+- `analisis/baqui/auditoria.py`: mide el acierto.
+- `analisis/baqui/sensibilidad.py`: mide qué tan frágil es cada umbral.
+- Tests: `analisis/tests/`. Pasan 178 de 178.
 
 ## 1. Qué se puede garantizar (y qué no)
 
@@ -22,7 +22,7 @@ Código:
 | **95 %** | **59** | 93 | 124 | 208 |
 | 99 % | 299 | 473 | 628 | 1.049 |
 
-(Cálculo exacto de Clopper-Pearson, de una cola. Se reproduce con `casos_necesarios()` en `baqui/auditoria.py`.)
+(Cálculo exacto de Clopper-Pearson, de una cola. Se reproduce con `casos_necesarios()` en `analisis/baqui/auditoria.py`.)
 
 **Cómo se sube el porcentaje garantizado:** se suben **dos cosas a la vez**:
 1. **El acierto real.** Se logra con mejores datos y reglas (secciones 3 y 5).
@@ -36,7 +36,7 @@ Código:
 
 | Regla | Si… | Color | Origen |
 |---|---|---|---|
-| **S** | Órbita o versión distinta, referencia que no es seca, menos de 20 píxeles válidos, o radar de **más de 12 días** | ⚪ **Sin dato** | Seguridad |
+| **S** | **Falta algún valor** del radar o de la lluvia, órbita o versión distinta, referencia que no es seca, menos de 20 píxeles válidos, o radar de **más de 12 días** | ⚪ **Sin dato** | Seguridad |
 | **R1** | **50 m seguidos o más** con agua nueva (el eslabón más débil) | 🔴 Intransitable | Equipo, var. 1 |
 | **R2** | **50 m seguidos o más** con agua bajo el monte (doble rebote) | 🔴 Intransitable | Equipo, var. 2 |
 | **G** | Radar de **más de 4 días** y **más de 20 mm** de lluvia después | ⚪ **Dato viejo**: "preguntá antes de salir" | Equipo, var. 4 |
@@ -47,8 +47,11 @@ Código:
 | **V** | Nada de lo anterior | 🟢 Transitable | — |
 
 **Reglas que cruzan toda la tabla:**
+- **Un dato vacío nunca da verde:** si falta algún valor del radar o de la lluvia (vacío o roto), el tramo sale **sin dato** y el motivo dice cuál. Por ejemplo: *"falta el dato de: suelo mojado, lluvia desde la pasada"*. Se revisa antes que todo lo demás, incluso antes del rojo: si el radar ve agua pero falta otro valor, el tramo sale sin dato (nunca verde, pero tampoco rojo). La altura (HAND) y la humedad de la zona son opcionales: si faltan, se sigue sin ellas. La lluvia de la fecha de referencia es un caso aparte: está en el punto siguiente.
+- **Referencia seca:** quiere decir **menos de 2 mm** de lluvia (IMERG) entre el día anterior y el día de la referencia, sumados, en la celda del tramo. Con 2 mm o más, el tramo sale sin dato: *"la fecha de referencia no es seca (4 mm de lluvia)"*. Es un valor de arranque (`lluvia_referencia`), a calibrar. Es un corte directo: acá no corre el margen de prudencia. **Ojo:** este control corre solo si quien llama al clasificador le pasa esa lluvia (`lluvia_referencia_mm`). `medir.py` la pasa siempre, y si la celda viene sin dato (NaN) el tramo sale sin dato. Si no se pasa (`None`, el valor por defecto), el control se saltea. `medir.py` guarda en cada tramo si la referencia era seca (sí, no o sin medir), así que al reclasificar desde su GeoJSON sale el mismo color. Límite: solo mira esos dos días; una lluvia fuerte de días anteriores no se ve, y la fecha de referencia se sigue eligiendo seca a mano.
+- **La lluvia que falta no es un día seco:** si la celda de IMERG de un día viene vacía, el tramo sale sin dato; si falta el archivo de un día, la corrida se corta con error. En la estimación día a día (`estado.py`), el tramo sigue sin dato hasta la próxima pasada del radar.
 - **Prudencia:** si un valor queda **a menos del 10 % de un corte**, se toma el color más grave. Por ejemplo, 46 m de agua seguida ya cuentan como 50.
-- **Un rojo viejo sigue rojo:** si el radar vio agua hace 8 días, se muestra rojo con confianza baja, no gris. Nunca se esconde una señal de peligro.
+- **Un rojo viejo sigue rojo:** si el radar vio agua hace 8 días, se muestra rojo con confianza baja, no gris: la edad del dato no esconde una señal de peligro.
 - **Asfalto:** solo se pinta por agua (R1, R2 y A1), nunca por barro.
 - **Ripio:** aguanta 50 % más de suelo mojado y de lluvia.
 - **Agua de siempre:** si el tramo tiene 30 % o más de laguna en la fecha seca, sale un aviso: "posible error del mapa de caminos".
@@ -71,9 +74,9 @@ La auditoría sigue **8 pasos, en este orden**. Si uno se saltea, el número no 
    - acierto medido y **acierto garantizado** (al menos X %);
    - **escapados** (verde y no pasó), con su máximo garantizado;
    - **detección** de cortados;
-   - **cobertura**: qué parte de los tramos tiene color y no gris.
+   - **cobertura**: qué parte de los tramos tiene color y no gris. "Dato viejo" se cuenta igual que "sin dato": no entra en el acierto y baja la cobertura.
 6. **Revisar cada error, uno por uno:** por qué falló (dato viejo, campo arado, viento sobre el agua, mapa de caminos mal) y qué regla lo hubiera evitado. **Los cambios entran en la versión siguiente**, que se vuelve a probar con un evento nuevo.
-7. **Prueba de fragilidad.** `sensibilidad()` mueve cada umbral ±20 % y cuenta cuántos tramos cambian de color. Si un umbral cambia mucho, está mal elegido o le falta dato.
+7. **Prueba de fragilidad.** `sensibilidad()` mueve cada umbral ±20 % y cuenta cuántos tramos cambian de color. No mueve los cortes de calidad del dato (píxeles, edad máxima del radar de 12 días, lluvia de la fecha de referencia) ni el margen de prudencia. El corte de dato fresco (4 días) sí se mueve, porque decide entre un color y "dato viejo". Si un umbral cambia mucho, está mal elegido o le falta dato.
 8. **Rastro completo y repetible.** Cada tramo guarda:
    - el ID del archivo del satélite;
    - la fecha de la pasada;
@@ -89,7 +92,7 @@ La auditoría sigue **8 pasos, en este orden**. Si uno se saltea, el número no 
 | **Reportes de productores y peones** del equipo y de conocidos: tramo, fecha, "pasé / con dificultad / no pasé" | Todo: agua, barro y verde | Pocos, pero los mejores |
 | **Noticias y redes de municipios del Chaco** con caminos cortados y fecha (por ejemplo, "camino X intransitable") | Rojos | Decenas por temporada de lluvias |
 | **OPERA DSWx-S1** (radar Sentinel-1, otro equipo y otro método) | Solo la parte de **agua** (R1, R2 y A1) | **Miles**, automáticos |
-| **Casos armados a mano** (tests) | Que el código haga lo que dicen las reglas | 26 hoy |
+| **Casos armados a mano** (tests) | Que el código haga lo que dicen las reglas | 178 hoy |
 
 **La parte de agua se puede auditar en serio en la hackatón:** comparar el agua que ve Baqui en cada tramo contra el mapa de agua de OPERA en la misma fecha da miles de casos, y con eso se puede garantizar un porcentaje alto. **La parte de barro necesita reportes de gente**: se arranca con los del equipo y se suma uno por cada uso real.
 

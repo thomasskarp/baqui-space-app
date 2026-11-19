@@ -7,11 +7,14 @@ Idea: un índice de barro (0 a 100) con memoria.
     * cada día con lluvia, sube según cuánto aguanta el tramo (su altura, HAND).
 - Si sigue lloviendo, empeora; si sale el sol y no llueve, mejora.
 - El color sale del índice. Mañana se estima suponiendo que no llueve.
+- Si falta la lluvia de un día (None, NaN), no se inventa un día seco: el tramo queda
+  sin dato hasta la próxima pasada del radar.
 
 Todos los números son de arranque: `media_vida` se calibra con las pasadas de NISAR
 posteriores a la lluvia del 9/10/2026 (ver docs/clasificacion-semaforo.md).
 """
 import math
+import numbers
 from dataclasses import dataclass, field
 
 ROJO, AMARILLO, VERDE, SIN_DATO = "intransitable", "con barro", "transitable", "sin dato"
@@ -32,7 +35,7 @@ class Parametros:
 
     def aguanta(self, hand_m):
         """mm de lluvia que llevan el tramo de seco a barro 100."""
-        if hand_m is None:
+        if not _es_numero(hand_m):     # None, NaN o inf: sin dato de altura
             return 25.0
         if hand_m < 2:
             return 15.0
@@ -43,15 +46,19 @@ class Parametros:
     def secado_diario(self, hand_m):
         """Fracción del barro que queda después de un día seco."""
         mv = self.media_vida
-        if hand_m is not None and hand_m < 2:
+        if not _es_numero(hand_m):     # None, NaN o inf: sin dato de altura
+            return 0.5 ** (1 / mv)
+        if hand_m < 2:
             mv *= self.factor_bajo
-        elif hand_m is not None and hand_m > 5:
+        elif hand_m > 5:
             mv *= self.factor_alto
         return 0.5 ** (1 / mv)
 
 
 def desde_radar(dhh_db, agua_seguida_m=0.0, p: Parametros = Parametros()):
-    """Índice de barro medido por el radar en el día de la pasada."""
+    """Índice de barro medido por el radar en el día de la pasada. Si falta un dato, NaN (sin dato)."""
+    if not _es_numero(agua_seguida_m):
+        return float("nan")
     if agua_seguida_m >= 50:
         return 100.0
     if not _es_numero(dhh_db):
@@ -59,8 +66,19 @@ def desde_radar(dhh_db, agua_seguida_m=0.0, p: Parametros = Parametros()):
     return max(0.0, min(100.0, 100 * dhh_db / p.dhh_lleno))
 
 
+def _suelto(x):
+    """Un valor de numpy envuelto en un arreglo de 0 dimensiones (lo que dan np.asarray o xarray) se saca: es un solo valor."""
+    if getattr(x, "ndim", None) != 0:
+        return x
+    if bool(getattr(x, "mask", False)):   # valor enmascarado de numpy (np.ma.masked): no hay dato
+        return None
+    return x.item()
+
+
 def _es_numero(x):
-    return isinstance(x, (int, float)) and math.isfinite(x)
+    """Número finito de verdad (también los de numpy, sueltos o envueltos). None, NaN, inf, texto o una lista: no."""
+    x = _suelto(x)
+    return isinstance(x, numbers.Real) and math.isfinite(x)
 
 
 def color(indice, p: Parametros = Parametros()):
@@ -96,21 +114,28 @@ def evolucionar(fechas, lluvia_mm, pasadas, hand_m=None, p: Parametros = Paramet
     """Recorre los días y devuelve el estado de cada uno.
 
     fechas: lista de fechas (texto), una por día, en orden.
-    lluvia_mm: lluvia de cada día, misma longitud.
+    lluvia_mm: lluvia de cada día, misma longitud. Un día sin dato (None, NaN) deja el tramo
+        sin dato hasta la próxima pasada: no cuenta como día seco.
     pasadas: {fecha: índice medido por el radar} (usar desde_radar()).
     """
     s = Serie()
     indice, desde = None, None
     for f, mm in zip(fechas, lluvia_mm):
+        mm = _suelto(mm)
         if f in pasadas:
-            indice, desde = pasadas[f], 0
+            indice, desde = _suelto(pasadas[f]), 0
             motivo = f"radar del {f}"
         elif indice is None:
             s.dias.append(Dia(f, float("nan"), SIN_DATO, -1, "todavía no pasó el radar"))
             continue
         else:
             desde += 1
-            if mm >= p.lluvia_minima:
+            if not _es_numero(indice):
+                pass   # ya está sin dato: sigue así, con su motivo, hasta la próxima pasada del radar
+            elif not _es_numero(mm):
+                # sin la lluvia del día no se sabe si el barro bajó o subió
+                indice, motivo = float("nan"), "falta el dato de lluvia"
+            elif mm >= p.lluvia_minima:
                 indice = min(100.0, indice + 100 * mm / p.aguanta(hand_m))
                 motivo = f"llovieron {mm:g} mm"
             else:

@@ -70,12 +70,17 @@ export function muestrear(linea: LatLon[], paso = PASO_MUESTREO_M): LatLon[] {
   return puntos;
 }
 
-/** El tramo tapado más largo de un camino: cuántos metros, dónde empieza y termina (metros desde el origen) y su punto medio. */
+/**
+ * El tramo tapado más largo de un camino: cuántos metros, dónde empieza y termina (metros desde el origen) y su punto medio.
+ * `metros` cuenta muestras (N muestras = N × paso). `desdeM` y `hastaM` son la posición de la primera y de la última
+ * muestra tapada: por eso hastaM − desdeM da un paso menos que `metros`.
+ */
 export type TramoTapado = { metros: number; desdeM: number; hastaM: number; centro: LatLon | null };
 
 /**
- * Tramo más largo tapado por agua nueva.
- * Cada muestra vale `paso` metros. Un punto dentro de una laguna de siempre no cuenta como tapado.
+ * Tramo más largo tapado por agua nueva. Un punto dentro de una laguna de siempre no cuenta como tapado.
+ * Cada muestra tapada vale `paso` metros (N muestras = N × paso). Eso redondea para el lado prudente: un charco real
+ * de 50 m o más siempre da intransitable. Con (N − 1) × paso se escaparían charcos reales de 50 a 55 m.
  */
 export function tramoTapadoMasLargo(
   linea: LatLon[],

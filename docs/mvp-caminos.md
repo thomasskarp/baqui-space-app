@@ -119,11 +119,11 @@ Comparamos el radar Sentinel-1 del **1/10** (antes) contra el del **13/10** (4 d
 | 118260612 | 1.710 m | +3,2 dB | -26,5898; -59,3005 |
 | 1084701978 | 954 m | +2,9 dB | -26,4326; -59,3315 |
 
-**Son candidatos, no confirmados:** la subida puede ser barro, pero también un campo arado o un cultivo al costado. Hay que confirmarlos con alguien que conozca el camino y con NISAR (29/9 contra 11/10). El script está en `%TEMP%\s1\cruce.py`.
+**Son candidatos, no confirmados:** la subida puede ser barro, pero también un campo arado o un cultivo al costado. Hay que confirmarlos con alguien que conozca el camino y con NISAR (29/9 contra 11/10). El script de este cruce no está en el repo.
 
 ## Primer resultado con NISAR (14/11, datos reales)
 
-Se leyó por internet solo la ventana de ~50 × 50 km de los dos GCOV de NISAR: órbita 161 A, frame 164, P05023, del 29/9 y del 11/10. Están en `datos/nisar/*.npz` y el script es `baqui/vista_nisar_mvp.py`. La imagen está en `datos/nisar/antes_despues_sanmartin.png`.
+Se leyó por internet solo la ventana de ~50 × 50 km de los dos GCOV de NISAR: órbita 161 A, frame 164, P05023, del 29/9 y del 11/10. Están en `datos/nisar/*.npz` y el script es `baqui/graficos/vista_nisar_mvp.py`. La imagen está en `datos/nisar/antes_despues_sanmartin.png`.
 
 - **Eco HH de toda la zona:** pasó de -7,9 a -7,2 dB (**+0,9 dB** de mediana). El 46 % del área subió más de 1 dB.
 - **Agua:** 1,3 % antes y 1,0 % después. **Agua nueva: 0,1 %.** No hubo inundación al 11/10: **barro sí, agua no.**
@@ -159,7 +159,7 @@ Cada pasada se compara contra una referencia seca **de su misma órbita**. Scrip
 
 ## Corredor Resistencia – General San Martín (NISAR 161A, 29/9 contra 11/10)
 
-Ventana de ~95 × 150 km, leída con `baqui/bajar_nisar.py`. Imagen: `datos/nisar/antes_despues_corredor.png` (`baqui/vista_corredor.py`).
+Ventana de ~95 × 150 km, leída con `baqui/descarga/bajar_nisar.py`. Imagen: `datos/nisar/antes_despues_corredor.png` (`baqui/graficos/vista_corredor.py`).
 
 - **Las dos ciudades entran en la misma pasada.** Resistencia queda cerca del borde este de la franja. El 19 % de la ventana cae fuera de la franja.
 - **La mitad norte, alrededor de General San Martín, se mojó** (azul). **Hacia Resistencia casi no cambió** o bajó un poco (rojo claro). La lluvia del 9/10 cargó más al norte.
@@ -190,7 +190,7 @@ El paso entre el radar y la tabla. Corrida: `python -m baqui.medir 20261011_161A
 - **Limpieza:** sin la mayoría de 3 × 3, el doble rebote daba 167 rojos con píxeles sueltos. Con la limpieza quedan 23.
 - **Ojo:**
   - El 68 % de la ventana queda como "monte" (HV alto). Eso incluye cultivos y pastizales, así que los 23 rojos por doble rebote son lo menos firme. Hay que mirarlos uno por uno contra la imagen o preguntar.
-  - La referencia del 29/9 tuvo 4 mm de lluvia ese mismo día (IMERG).
+  - La referencia del 29/9 tuvo 4 mm de lluvia ese mismo día (IMERG), de media en todo el corredor: llovió sobre todo al sur. En las celdas de los tramos medidos fueron entre 0,1 y 1,2 mm, menos que los 2 mm del control de referencia seca. Ese control no deja ningún tramo sin dato y las cifras de arriba no cambian (corrida repetida el 18/11).
 
 ### Con la lluvia sumada (`baqui/lluvia.py`, 15/11)
 

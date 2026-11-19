@@ -4,6 +4,7 @@ Uso: python -m baqui.descarga.bajar_nisar
 Salida: datos/nisar/<fecha>_<orbita>.npz con HHHH, HVHV, mask, x, y y el EPSG.
 """
 import sys, time
+from pathlib import Path
 import numpy as np, h5py, earthaccess
 from pyproj import Transformer
 
@@ -31,6 +32,7 @@ def main():
     r = earthaccess.search_data(short_name="NISAR_L2_GCOV_PROVISIONAL_V1", point=(-59.34, -26.54),
                                 temporal=("2026-09-28", "2026-10-12"))
     r = [g for g in r if "_161_A_164_" in g["meta"]["native-id"]]
+    Path(SALIDA).mkdir(parents=True, exist_ok=True)   # en un clon nuevo la carpeta no existe
     for g, fh in zip(r, earthaccess.open(r)):
         nombre = g["meta"]["native-id"]
         fecha = nombre.split("_")[11][:8]
